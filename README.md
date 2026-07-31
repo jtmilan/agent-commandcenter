@@ -65,4 +65,4 @@ Private / product proposal unless otherwise noted by owner.
 ## Related
 
 - Upstream research may live in `jtmilan/harness-ready`  
-- Planned: `ade-api` for entitlements + Stripe webhooks  
+- **Billing API:** [`jtmilan/ade-api`](https://github.com/jtmilan/ade-api) — Stripe webhooks (HMAC), entitlements, usage  

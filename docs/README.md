@@ -9,6 +9,7 @@ Handover pack for **Agent Command Center** (harness-ready UI proposal) and follo
 | [HMAC-WEBHOOK-VERIFICATION.md](./HMAC-WEBHOOK-VERIFICATION.md) | Webhook HMAC notes + Express/manual/Hono code examples |
 | [RECOMMENDATIONS-CHECKLIST.md](./RECOMMENDATIONS-CHECKLIST.md) | Prioritized P0–P2 checklist |
 | [ARCHITECTURE-ANALYSES.md](./ARCHITECTURE-ANALYSES.md) | Five skill-tagged analyses (plugins, IPC, crypto, reliability, entitlements) |
+| [ADE-API.md](./ADE-API.md) | Separate backend repo (`jtmilan/ade-api`) |
 
 ## In-app
 
