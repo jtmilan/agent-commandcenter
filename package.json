@@ -14,7 +14,10 @@
     "preview": "vite preview --host 0.0.0.0 --port 8080",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "tauri": "tauri",
+    "tauri:dev": "tauri dev",
+    "tauri:build": "tauri build"
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.5.3",
@@ -89,5 +92,5 @@
     "typescript-eslint": "^8.56.1",
     "vite": "^8.1.0"
   },
-  "description": "Agent Command Center (ADE) \u2014 multi-harness operator UI"
+  "description": "Agent Command Center (ADE) \u2014 Tauri native multi-harness operator (macOS first; UI via Vite)"
 }

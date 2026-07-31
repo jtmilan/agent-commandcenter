@@ -8,7 +8,7 @@
 | **Document type** | PRD + engineering handover |
 | **Version** | 1.0 |
 | **Date** | 2026-07-31 |
-| **Status** | Mock / design-complete for core surfaces; native Tauri + `ade-api` not production-wired |
+| **Status** | UI complete as proposal; **product is Tauri native (macOS first)** — see docs/DESKTOP-BUILD.md; host plugins + ade-api wiring ongoing |
 | **Primary users** | Operators running multi-agent harness fleets (Claude, Cursor, Codex, Grok, Pi, bash, …) |
 
 ---
