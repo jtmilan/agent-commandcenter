@@ -8,7 +8,7 @@ export type PaneStatus =
 
 export type TelemetryState = "live" | "stale" | "state_blind" | "placeholder" | "no_data";
 
-export type TabId = "command" | "monitoring" | "context";
+export type TabId = "command" | "monitoring" | "context" | "admin";
 
 export type Role = "coordinator" | "builder" | "scout" | "reviewer" | "none";
 
@@ -29,9 +29,7 @@ export interface Pane {
   queueDepth?: number;
   telemetry: TelemetryState;
   gitClean?: boolean;
-  /** User pin — stays in left pin column under sub-linear pack */
   pinned?: boolean;
-  /** MCP snapshot at spawn — from Control Center bindings */
   mcpServerIds?: string[];
   mcpPresetId?: string;
   mcpMode?: "inherit" | "preset" | "custom";
@@ -42,11 +40,8 @@ export interface Workspace {
   id: string;
   name: string;
   path: string;
-  /** Harness kinds available / configured for this workspace */
   harnesses: string[];
-  /** Optional parent for workspace tree (sub-linear workspace hierarchy) */
   parentId?: string;
-  /** Short lane/label for sub-workspaces */
   lane?: string;
 }
 
