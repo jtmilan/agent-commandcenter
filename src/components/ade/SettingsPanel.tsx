@@ -19,11 +19,13 @@ import {
 } from "lucide-react";
 import {
   BILLING_API_CONTRACT,
+  DEMO_CAMPAIGNS,
   DEMO_SUBSCRIPTION,
   PLANS,
   usageForPlan,
   type SubscriptionSnapshot,
 } from "./subscription";
+
 import { FIVE_ANALYSES, buildArchitectureMarkdown } from "./architectureAnalyses";
 import {
   ASYNC_SPAWN_EXAMPLE,
@@ -172,6 +174,8 @@ export function SettingsPanel({
   const [wrapCode, setWrapCode] = useState(true);
   const [confirmClose, setConfirmClose] = useState(true);
   const [autoArrange, setAutoArrange] = useState(true);
+  const [couponInput, setCouponInput] = useState("");
+
 
   const plan = PLANS.find((p) => p.id === sub.planId) ?? PLANS[1]!;
   const meters = useMemo(() => usageForPlan(sub.planId), [sub.planId]);
@@ -331,17 +335,42 @@ export function SettingsPanel({
 
             {nav === "billing" && (
               <div className="space-y-6">
+                {DEMO_CAMPAIGNS.filter((c) => c.placement === "billing_banner").map((c) => (
+                  <div
+                    key={c.id}
+                    className="rounded-lg border border-accent/30 bg-accent-dim/40 px-4 py-3"
+                  >
+                    <p className="text-sm font-medium text-fg">{c.title}</p>
+                    <p className="mt-0.5 text-xs text-muted">{c.body}</p>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        onToast(`Campaign CTA → ade-api (mock): ${c.ctaLabel}`)
+                      }
+                      className="mt-2 font-mono text-[11px] font-semibold text-accent"
+                    >
+                      {c.ctaLabel} →
+                    </button>
+                  </div>
+                ))}
+
                 <div className="flex flex-wrap items-start justify-between gap-3 rounded-lg border border-border bg-elevated p-4">
                   <div>
                     <p className="label-caps">Current plan</p>
                     <p className="mt-1 text-lg font-semibold text-fg">{plan.name}</p>
-                    <p className="font-mono text-[11px] text-muted">
+                    <p className="mt-0.5 max-w-md text-xs text-muted">{plan.pitch}</p>
+                    <p className="mt-1 font-mono text-[11px] text-muted">
                       {plan.priceLabel}
                       {plan.priceMonthly ? "/mo" : ""} · renews{" "}
                       {sub.renewsAt
                         ? new Date(sub.renewsAt).toLocaleDateString()
                         : "—"}
                     </p>
+                    {sub.promo && (
+                      <p className="mt-2 inline-flex rounded-full border border-accent/40 bg-accent-dim px-2 py-0.5 font-mono text-[10px] text-accent">
+                        Promo {sub.promo.code}: {sub.promo.label}
+                      </p>
+                    )}
                   </div>
                   <span
                     className={`rounded-full border px-2 py-0.5 font-mono text-[10px] uppercase ${
@@ -352,6 +381,68 @@ export function SettingsPanel({
                   >
                     {sub.status}
                   </span>
+                </div>
+
+                {sub.credits && (
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    <div className="rounded-lg border border-border bg-elevated p-3">
+                      <p className="label-caps">Token credits</p>
+                      <p className="mt-1 font-mono text-sm text-fg">
+                        {sub.credits.tokenBalance.toLocaleString()}
+                      </p>
+                      <p className="text-[10px] text-muted">From ade-api wallet</p>
+                    </div>
+                    <div className="rounded-lg border border-border bg-elevated p-3">
+                      <p className="label-caps">Handoff credits</p>
+                      <p className="mt-1 font-mono text-sm text-fg">
+                        {sub.credits.handoffBalance}
+                      </p>
+                      <p className="text-[10px] text-muted">Burns on session export</p>
+                    </div>
+                  </div>
+                )}
+
+                <div className="rounded-lg border border-border bg-elevated p-4">
+                  <p className="text-sm font-medium text-fg">Redeem coupon</p>
+                  <p className="mt-0.5 text-xs text-muted">
+                    Validated on ade-api only — never trust a client-only code.
+                  </p>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <input
+                      value={couponInput}
+                      onChange={(e) => setCouponInput(e.target.value.toUpperCase())}
+                      placeholder="LAUNCH50"
+                      className="min-w-[10rem] flex-1 rounded-md border border-border bg-bg px-3 py-2 font-mono text-xs text-fg outline-none focus:border-accent"
+                      aria-label="Coupon code"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const code = couponInput.trim() || "LAUNCH50";
+                        setSub((s) => ({
+                          ...s,
+                          promo: {
+                            code,
+                            label: `Applied ${code} (mock redeem)`,
+                            endsAt: "2026-09-01T00:00:00.000Z",
+                          },
+                          credits: s.credits
+                            ? {
+                                ...s.credits,
+                                handoffBalance: s.credits.handoffBalance + 20,
+                              }
+                            : s.credits,
+                        }));
+                        onToast(
+                          `Mock POST /v1/coupons/redeem { code: "${code}" } → refresh entitlements`,
+                        );
+                        setCouponInput("");
+                      }}
+                      className="rounded-md bg-accent px-3 py-2 font-mono text-[11px] font-semibold text-accent-fg"
+                    >
+                      Redeem
+                    </button>
+                  </div>
                 </div>
 
                 <div className="grid gap-3 sm:grid-cols-3">
@@ -369,7 +460,7 @@ export function SettingsPanel({
                         onToast(
                           p.id === sub.planId
                             ? "Already on this plan"
-                            : `Mock switch → ${p.name} (API checkout in prod)`,
+                            : `Checkout → ade-api POST /checkout { planId: "${p.id}", couponCode? }`,
                         );
                       }}
                     />
@@ -380,7 +471,9 @@ export function SettingsPanel({
                   <button
                     type="button"
                     onClick={() =>
-                      onToast("Would open Stripe Checkout via ade-api POST /checkout")
+                      onToast(
+                        "Stripe Checkout via ade-api POST /checkout (system browser)",
+                      )
                     }
                     className="inline-flex items-center gap-1.5 rounded-md bg-accent px-3 py-2 font-mono text-[11px] font-semibold text-accent-fg"
                   >
@@ -390,13 +483,15 @@ export function SettingsPanel({
                   <button
                     type="button"
                     onClick={() =>
-                      onToast("Would open Stripe Customer Portal via POST /portal")
+                      onToast("Stripe Customer Portal via POST /portal")
                     }
                     className="rounded-md border border-border px-3 py-2 font-mono text-[11px] text-muted hover:text-fg"
                   >
                     Invoices & payment method
                   </button>
                 </div>
+              </div>
+            )}
               </div>
             )}
 
@@ -681,8 +776,9 @@ function PlanCard({
           <span className="text-xs font-normal text-muted">/mo</span>
         ) : null}
       </p>
+      <p className="mt-1 text-[10px] leading-snug text-muted">{plan.pitch}</p>
       <ul className="mt-2 space-y-1 font-mono text-[10px] text-muted">
-        {plan.features.slice(0, 4).map((f) => (
+        {plan.features.slice(0, 3).map((f) => (
           <li key={f}>· {f}</li>
         ))}
       </ul>

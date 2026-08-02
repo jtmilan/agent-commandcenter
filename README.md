@@ -4,6 +4,8 @@
 
 **Repository:** [`jtmilan/agent-commandcenter`](https://github.com/jtmilan/agent-commandcenter)
 
+**For operators:** Run multi-agent fleets on your Mac — workspaces, MCP, merge gate, and handoff. Plans and promos are managed via [`ade-api`](https://github.com/jtmilan/ade-api) (coupons, credits, trials); local worktrees keep working even when cloud extras soft-gate.
+
 ---
 
 ## Important: this is a **native desktop app**, not a web product
@@ -105,6 +107,7 @@ Use `npm run dev` to iterate on React UI. Use **`npm run tauri dev`** when you n
 |----------|-------------|
 | **[docs/DESKTOP-BUILD.md](docs/DESKTOP-BUILD.md)** | **Clone, Tauri, macOS build (start here)** |
 | [docs/ADE-API.md](docs/ADE-API.md) | Companion backend repo |
+| [docs/GROWTH-ENGAGEMENT-API.md](docs/GROWTH-ENGAGEMENT-API.md) | Coupons, credits, marketing, engagement |
 | [docs/PRD-HANDOVER.md](docs/PRD-HANDOVER.md) | Product handover |
 | [docs/ASYNC-CAPABILITIES.md](docs/ASYNC-CAPABILITIES.md) | Capabilities + async host model |
 | [docs/HMAC-WEBHOOK-VERIFICATION.md](docs/HMAC-WEBHOOK-VERIFICATION.md) | Webhook HMAC (ade-api only) |

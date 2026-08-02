@@ -1,6 +1,7 @@
 /**
- * Subscription model (product mock) for Agent Command Center / ADE.
- * Real billing lives in a separate API repo; this is the client contract.
+ * Subscription + growth model (product mock) for Agent Command Center / ADE.
+ * Real billing lives in ade-api; this is the client contract.
+ * Growth: coupons, credits, campaigns — see docs/GROWTH-ENGAGEMENT-API.md
  */
 
 export type PlanId = "free" | "pro" | "team";
@@ -8,10 +9,12 @@ export type PlanId = "free" | "pro" | "team";
 export interface Plan {
   id: PlanId;
   name: string;
-  priceMonthly: number | null; // null = custom
+  priceMonthly: number | null;
   priceLabel: string;
   seats: number | "unlimited";
   highlight?: boolean;
+  /** One-line operator-facing pitch */
+  pitch: string;
   features: string[];
   limits: {
     concurrentPanes: number;
@@ -19,6 +22,11 @@ export interface Plan {
     mcpServers: number;
     handoffExportsDay: number;
     prioritySupport: boolean;
+  };
+  /** Monthly included credits (soft consumables) */
+  includedCredits: {
+    tokens: number;
+    handoffs: number;
   };
 }
 
@@ -29,11 +37,12 @@ export const PLANS: Plan[] = [
     priceMonthly: 0,
     priceLabel: "$0",
     seats: 1,
+    pitch: "Learn multi-agent fleets on your machine. Local worktrees always free.",
     features: [
       "1 workspace · 3 concurrent panes",
       "Local MCP registry",
       "Merge gate dry-run",
-      "Community recipes",
+      "Welcome credits to try handoff",
     ],
     limits: {
       concurrentPanes: 3,
@@ -42,6 +51,7 @@ export const PLANS: Plan[] = [
       handoffExportsDay: 5,
       prioritySupport: false,
     },
+    includedCredits: { tokens: 500_000, handoffs: 5 },
   },
   {
     id: "pro",
@@ -50,12 +60,13 @@ export const PLANS: Plan[] = [
     priceLabel: "$29",
     seats: 1,
     highlight: true,
+    pitch: "Run full fleets daily — handoff, MCP packs, merge gate for operators.",
     features: [
       "Unlimited workspaces",
       "24 concurrent panes · sub-linear pack",
       "MCP pack import/export",
       "Session handoff + merge gate",
-      "Priority model routing (when wired)",
+      "Promo & credit top-ups supported",
     ],
     limits: {
       concurrentPanes: 24,
@@ -64,6 +75,7 @@ export const PLANS: Plan[] = [
       handoffExportsDay: 200,
       prioritySupport: true,
     },
+    includedCredits: { tokens: 10_000_000, handoffs: 200 },
   },
   {
     id: "team",
@@ -71,12 +83,13 @@ export const PLANS: Plan[] = [
     priceMonthly: 99,
     priceLabel: "$99",
     seats: 5,
+    pitch: "Shared recipes, org MCP policy, pooled credits — one bill for the fleet.",
     features: [
       "Everything in Pro",
       "5 seats · SSO-ready API",
       "Org MCP policy templates",
-      "Usage analytics API",
-      "Shared recipe library",
+      "Pooled credit wallet",
+      "Usage analytics + referrals",
     ],
     limits: {
       concurrentPanes: 64,
@@ -85,10 +98,23 @@ export const PLANS: Plan[] = [
       handoffExportsDay: 2000,
       prioritySupport: true,
     },
+    includedCredits: { tokens: 50_000_000, handoffs: 2000 },
   },
 ];
 
 export type SubStatus = "active" | "trialing" | "past_due" | "canceled" | "none";
+
+export interface PromoOverlay {
+  code: string;
+  label: string;
+  endsAt: string | null;
+}
+
+export interface CreditsWallet {
+  tokenBalance: number;
+  handoffBalance: number;
+  currency: "ade_credit";
+}
 
 export interface SubscriptionSnapshot {
   planId: PlanId;
@@ -96,17 +122,29 @@ export interface SubscriptionSnapshot {
   renewsAt: string | null;
   trialEndsAt: string | null;
   customerEmail: string;
-  /** Stripe customer / subscription ids — opaque to UI */
   externalCustomerId?: string;
   externalSubscriptionId?: string;
+  promo?: PromoOverlay | null;
+  credits?: CreditsWallet;
 }
 
 export interface UsageMeter {
   id: string;
   label: string;
   used: number;
-  limit: number | null; // null = unlimited
+  limit: number | null;
   unit: string;
+}
+
+export interface CampaignBanner {
+  id: string;
+  placement: "billing_banner" | "command_strip" | "soft_gate";
+  title: string;
+  body: string;
+  ctaLabel: string;
+  planId?: PlanId;
+  couponCode?: string;
+  endsAt: string | null;
 }
 
 export const DEMO_SUBSCRIPTION: SubscriptionSnapshot = {
@@ -117,7 +155,28 @@ export const DEMO_SUBSCRIPTION: SubscriptionSnapshot = {
   customerEmail: "jeffry@example.com",
   externalCustomerId: "cus_mock_ade",
   externalSubscriptionId: "sub_mock_ade",
+  promo: {
+    code: "LAUNCH50",
+    label: "Launch: 50% off first 3 months",
+    endsAt: "2026-09-01T00:00:00.000Z",
+  },
+  credits: {
+    tokenBalance: 8_760_000,
+    handoffBalance: 188,
+    currency: "ade_credit",
+  },
 };
+
+export const DEMO_CAMPAIGNS: CampaignBanner[] = [
+  {
+    id: "camp_august_launch",
+    placement: "billing_banner",
+    title: "Launch week: invite a teammate",
+    body: "Both of you get handoff credits when they finish the wizard.",
+    ctaLabel: "Copy referral (API)",
+    endsAt: "2026-08-15T00:00:00.000Z",
+  },
+];
 
 export function usageForPlan(planId: PlanId): UsageMeter[] {
   const plan = PLANS.find((p) => p.id === planId) ?? PLANS[0]!;
@@ -154,52 +213,48 @@ export function usageForPlan(planId: PlanId): UsageMeter[] {
       id: "tokens",
       label: "Agent tokens (estimate)",
       used: 1_240_000,
-      limit: planId === "free" ? 500_000 : planId === "pro" ? 10_000_000 : null,
+      limit: plan.includedCredits.tokens,
       unit: "tok",
     },
   ];
 }
 
-/** Contract for separate billing API (ade-api / billing service) */
+/** Contract for ade-api including growth surface */
 export const BILLING_API_CONTRACT = `
-# ade-billing API (separate repo) — v0 sketch
+# ade-api contract (billing + growth) — v1 sketch
 
 Base: https://api.yourdomain.com/v1
 Auth: Bearer <user_jwt> or desktop device token (Tauri)
 
-## Endpoints
-GET  /me                     → user + subscription snapshot
-GET  /plans                  → catalog (also cacheable static)
-POST /checkout               → { planId, successUrl, cancelUrl } → { url }
-POST /portal                 → Stripe customer portal URL
-GET  /usage?from=&to=        → meters + series for charts
-POST /webhooks/stripe        → server-only; updates sub status
-GET  /entitlements           → { features: string[], limits: {...} }
+## Core
+GET  /me
+GET  /plans
+GET  /entitlements          → plan + features + limits + credits + promo + trialEndsAt + sig
+GET  /usage
+POST /checkout              → { planId, couponCode?, successUrl, cancelUrl }
+POST /portal
+POST /webhooks/stripe       → server-only HMAC
 
-## Entitlements (what the desktop app checks)
-- feature.mcp.export
-- feature.merge.gate
-- feature.handoff.v2
-- limit.panes.concurrent
-- limit.workspaces
-- limit.mcp.servers
+## Growth (see docs/GROWTH-ENGAGEMENT-API.md)
+POST /coupons/redeem        → { code } → new entitlements
+GET  /coupons/preview?code=
+GET  /credits
+POST /credits/consume       → Idempotency-Key required
+GET  /credits/ledger
+GET  /campaigns/active
+POST /campaigns/:id/dismiss
+POST /events                → allowlisted product events
+GET  /referrals/me
+POST /referrals/claim
 
-## Desktop (Tauri) flow
-1. Sign-in via OAuth / device code → short-lived JWT
-2. Cache entitlements offline (signed, TTL 1h)
-3. Soft-gate Pro features when expired; never block local worktrees
-4. "Upgrade" opens system browser → checkout URL from API
-5. Webhook → API; app refreshes /entitlements on focus
-
-## Repo split
-| Repo            | Owns                                      |
-|-----------------|-------------------------------------------|
-| harness-ready   | Tauri + React ADE UI, local MCP, panes    |
-| ade-api         | Auth, Stripe, entitlements, usage, SSO    |
-| ade-docs        | Public pricing + operator guides          |
+## Desktop rules
+1. Cache signed entitlements (TTL ~1h); refresh on focus
+2. Soft-gate only; never brick local worktrees
+3. Redeem coupons only via API — never trust client-only codes
+4. Marketing banners from /campaigns/active; dismissible
+5. Checkout opens system browser; no card UI in WebView
 
 ## Never in the desktop binary
-- Stripe secret key
-- Webhook signing secret
-- Raw card data
+- Stripe secret / webhook secret
+- Ability to invent credit balances offline
 `.trim();

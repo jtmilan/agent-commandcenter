@@ -7,6 +7,7 @@ Handover pack for **Agent Command Center** — a **Tauri native desktop** produc
 | **[DESKTOP-BUILD.md](./DESKTOP-BUILD.md)** | **Clone & build Tauri / macOS (start here)** |
 | [PRD-HANDOVER.md](./PRD-HANDOVER.md) | Product requirements & engineering handover |
 | [ADE-API.md](./ADE-API.md) | Separate backend [`jtmilan/ade-api`](https://github.com/jtmilan/ade-api) |
+| [GROWTH-ENGAGEMENT-API.md](./GROWTH-ENGAGEMENT-API.md) | Coupons, credits, campaigns, engagement |
 | [ASYNC-CAPABILITIES.md](./ASYNC-CAPABILITIES.md) | Tauri capability JSON/TOML + async layers |
 | [HMAC-WEBHOOK-VERIFICATION.md](./HMAC-WEBHOOK-VERIFICATION.md) | Stripe HMAC (ade-api only) |
 | [RECOMMENDATIONS-CHECKLIST.md](./RECOMMENDATIONS-CHECKLIST.md) | Prioritized P0–P2 checklist |

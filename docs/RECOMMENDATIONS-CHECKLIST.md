@@ -99,3 +99,22 @@ Legend: **P0** ship-blocker · **P1** paid launch · **P2** polish / scale
 ---
 
 *Last updated: 2026-07-31 — Agent Command Center UI proposal workspace.*
+
+---
+
+## H. Growth & engagement (coupons, credits, marketing)
+
+See [GROWTH-ENGAGEMENT-API.md](./GROWTH-ENGAGEMENT-API.md).
+
+| # | Pri | Recommendation | Done? |
+|---|-----|----------------|-------|
+| H1 | P0 | Entitlements include credits + trialEndsAt + promo | [ ] |
+| H2 | P0 | `POST /v1/coupons/redeem` + checkout `couponCode` | [ ] |
+| H3 | P0 | Settings Billing: redeem UI + promo chip | [ ] |
+| H4 | P1 | Credits ledger + consume API (idempotent) | [ ] |
+| H5 | P1 | Welcome credits on wizard_completed event | [ ] |
+| H6 | P1 | In-app campaigns + dismiss | [ ] |
+| H7 | P1 | Soft-gate dual CTA (credits vs upgrade) | [ ] |
+| H8 | P2 | Referrals + win-back segments | [ ] |
+| H9 | P2 | Credit packs (one-time Checkout) | [ ] |
+| H10 | P2 | Lifecycle email from ade-api (not desktop) | [ ] |
