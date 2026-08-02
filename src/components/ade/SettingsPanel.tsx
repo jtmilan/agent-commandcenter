@@ -492,8 +492,6 @@ export function SettingsPanel({
                 </div>
               </div>
             )}
-              </div>
-            )}
 
             {nav === "usage" && (
               <div className="space-y-4">
