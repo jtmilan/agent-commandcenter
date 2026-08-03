@@ -6,21 +6,28 @@ import { useEffect, useMemo, useState, type ComponentType, type ReactNode } from
 import {
   AlertTriangle,
   Bell,
+  BookOpen,
   Check,
   CheckSquare,
   ClipboardCopy,
   Command,
   Download,
+  Flame,
   FolderTree,
   GitMerge,
+  GitPullRequest,
+  History,
   Inbox,
   LayoutTemplate,
+  Lock,
   Map as MapIcon,
   Radio,
+  Rocket,
   Save,
   Send,
   Shield,
   Table2,
+  Users,
   X,
   Activity,
   Info,
@@ -51,6 +58,13 @@ export type FeatureId =
   | "presets"
   | "matrix"
   | "mcp"
+  | "diff"
+  | "runbook"
+  | "heat"
+  | "timeline"
+  | "orgmcp"
+  | "team_inbox"
+  | "mission"
   | null;
 
 
@@ -1421,14 +1435,21 @@ export const FEATURE_LAUNCHERS: {
   icon: ComponentType<{ className?: string }>;
 }[] = [
   { id: "inbox", label: "Inbox", icon: Bell },
+  { id: "team_inbox", label: "Team Q", icon: Users },
   { id: "ownership", label: "Paths", icon: MapIcon },
+  { id: "heat", label: "Heat", icon: Flame },
   { id: "recipes", label: "Recipes", icon: FolderTree },
+  { id: "runbook", label: "Runbook", icon: BookOpen },
+  { id: "diff", label: "Diff/PR", icon: GitPullRequest },
   { id: "telemetry", label: "Telemetry", icon: Activity },
+  { id: "timeline", label: "Timeline", icon: History },
   { id: "broadcast", label: "Broadcast", icon: Radio },
   { id: "merge", label: "Merge", icon: GitMerge },
   { id: "handoff", label: "Handoff", icon: Download },
   { id: "presets", label: "Layouts", icon: LayoutTemplate },
   { id: "matrix", label: "Matrix", icon: Table2 },
   { id: "mcp", label: "MCP", icon: Cable },
+  { id: "orgmcp", label: "Org MCP", icon: Lock },
+  { id: "mission", label: "Mission", icon: Rocket },
 ];
 

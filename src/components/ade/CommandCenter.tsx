@@ -14,6 +14,7 @@ import {
   Radio,
   Search,
   Settings2,
+  Shield,
   Terminal,
   X,
 } from "lucide-react";
@@ -36,6 +37,32 @@ import {
   type StoredRecipe,
   TelemetryDrawer,
 } from "./FeaturePanels";
+import { AdminConsole } from "./AdminConsole";
+import {
+  ConflictHeatMap,
+  DiffPrPane,
+  EntitlementsChip,
+  HostBridgeBanner,
+  OrgMcpPolicy,
+  RunbookRunner,
+  SessionTimeline,
+  SharedTeamInbox,
+  SoftGateModal,
+  WelcomeMission,
+  loadEntitlements,
+  saveEntitlements,
+  seedTimelineFromFleet,
+  type LocalEntitlements,
+  type SoftGateFeature,
+} from "./NextPathPanels";
+import { canUse } from "../../lib/entitlementsClient";
+import {
+  PERSONAS,
+  getPersona,
+  loadPersona,
+  savePersona,
+  type PersonaId,
+} from "./personas";
 import { KeyboardHintsPanel } from "./KeyboardHints";
 import { packWorkspace, workspaceTree } from "./layout";
 import { McpControlCenter } from "./McpControlCenter";
@@ -46,6 +73,8 @@ import { SettingsPanel } from "./SettingsPanel";
 import { ThemeDocsPanel } from "./ThemeDocs";
 import { ThemeToggle, useTheme } from "./ThemeToggle";
 import { WorkspaceWizard } from "./wizard";
+import { publishStatus } from "../../lib/statusBus";
+import { destroyWorktree, registerWorktreeRoot } from "../../lib/agent-bridge";
 import type { Pane, TabId, Workspace } from "./types";
 
 type ViewMode = "empty" | "fleet";
@@ -83,7 +112,19 @@ export function CommandCenter() {
   const [feature, setFeature] = useState<FeatureId>(null);
   const [mcpInspectId, setMcpInspectId] = useState<string | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [persona, setPersona] = useState<PersonaId>(() =>
+    typeof window !== "undefined" ? loadPersona() : "operator",
+  );
+  const personaMeta = getPersona(persona);
+  const [entitlements, setEntitlements] = useState<LocalEntitlements>(() =>
+    typeof window !== "undefined" ? loadEntitlements() : loadEntitlements(),
+  );
+  const [softGate, setSoftGate] = useState<{
+    feature: SoftGateFeature;
+    proceed?: () => void;
+  } | null>(null);
   const [dropTargetId, setDropTargetId] = useState<string | null>(null);
+
   const [toast, setToast] = useState<string | null>(null);
   const [orders, setOrders] = useState<Record<string, string[]>>({});
   const [expanded, setExpanded] = useState<Record<string, boolean>>(() =>
@@ -133,6 +174,18 @@ export function CommandCenter() {
     setToast(msg);
     window.setTimeout(() => setToast(null), 2600);
   }, []);
+
+  const requestGate = useCallback(
+    (feature: SoftGateFeature, proceed: () => void) => {
+      const gate = canUse(entitlements, feature);
+      if (gate.ok) {
+        proceed();
+        return;
+      }
+      setSoftGate({ feature, proceed });
+    },
+    [entitlements],
+  );
 
   const selectWorkspace = (id: string) => {
     setActiveWorkspaceId(id);
@@ -199,6 +252,13 @@ export function CommandCenter() {
       );
       setSelected(defaultOrder(next.filter((p) => p.workspaceId === target))[0] ?? null);
       setExpanded(Object.fromEntries(WORKSPACES.map((w) => [w.id, true])));
+      for (const w of WORKSPACES) registerWorktreeRoot(w.path);
+      seedTimelineFromFleet(next);
+      publishStatus({
+        kind: "system",
+        message: "Demo fleet loaded",
+        source: "mock",
+      });
       flash("Demo fleet loaded");
     },
     [flash],
@@ -240,16 +300,31 @@ export function CommandCenter() {
 
   const closePane = (id: string) => {
     const pane = panes.find((p) => p.id === id);
-    setPanes((prev) => prev.filter((p) => p.id !== id));
-    setOrders((o) => {
-      const next: Record<string, string[]> = {};
-      for (const [ws, ids] of Object.entries(o)) next[ws] = ids.filter((x) => x !== id);
-      return next;
-    });
-    if (selected === id) {
-      setSelected(panesInWorkspace.find((p) => p.id !== id)?.id ?? null);
-    }
-    flash(pane ? `Closed ${pane.name}` : "Closed");
+    const finish = async () => {
+      if (pane?.worktree) {
+        registerWorktreeRoot(workspaces.find((w) => w.id === pane.workspaceId)?.path ?? "");
+        const r = await destroyWorktree(pane.worktree);
+        publishStatus({
+          kind: "worktree",
+          paneId: id,
+          message: r.ok
+            ? `Destroyed worktree ${pane.worktree}`
+            : `Worktree destroy blocked: ${r.error}`,
+          source: r.host === "tauri" ? "git" : "mock",
+        });
+      }
+      setPanes((prev) => prev.filter((p) => p.id !== id));
+      setOrders((o) => {
+        const next: Record<string, string[]> = {};
+        for (const [ws, ids] of Object.entries(o)) next[ws] = ids.filter((x) => x !== id);
+        return next;
+      });
+      if (selected === id) {
+        setSelected(panesInWorkspace.find((p) => p.id !== id)?.id ?? null);
+      }
+      flash(pane ? `Closed ${pane.name}` : "Closed");
+    };
+    void finish();
   };
 
   const replyToPane = (paneId: string, text: string) => {
@@ -500,12 +575,15 @@ export function CommandCenter() {
               { id: "command" as const, label: "Command", icon: LayoutGrid },
               { id: "monitoring" as const, label: "Monitoring", icon: Activity },
               { id: "context" as const, label: "Context", icon: Network },
+              ...(persona === "admin"
+                ? [{ id: "admin" as const, label: "Admin", icon: Shield }]
+                : []),
             ] as const
           ).map(({ id, label, icon: Icon }) => (
             <button
               key={id}
               type="button"
-              onClick={() => setTab(id)}
+              onClick={() => setTab(id as TabId)}
               className={`flex items-center gap-1.5 rounded-sm px-2.5 py-1 text-xs ${
                 tab === id ? "bg-panel text-fg" : "text-muted hover:text-fg"
               }`}
@@ -522,6 +600,35 @@ export function CommandCenter() {
               cost {layoutPreview.surfaceCost}/{panesInWorkspace.length || 0}
             </span>
           )}
+          <EntitlementsChip
+            entitlements={entitlements}
+            onOpenMission={() => setFeature("mission")}
+          />
+          <label className="hidden items-center gap-1 sm:flex" title="Console persona">
+            <span className="label-caps text-[9px] text-subtle">persona</span>
+            <select
+              value={persona}
+              onChange={(e) => {
+                const next = e.target.value as PersonaId;
+                setPersona(next);
+                savePersona(next);
+                if (next === "admin") setTab("admin");
+                else if (tab === "admin") setTab("command");
+                flash(`Persona → ${getPersona(next).label}`);
+              }}
+              className="rounded-sm border border-border bg-elevated px-1.5 py-1 font-mono text-[10px] text-fg"
+              aria-label="Persona"
+            >
+              {PERSONAS.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <span className="hidden font-mono text-[9px] text-subtle md:inline">
+            {personaMeta.email}
+          </span>
           <button
             type="button"
             onClick={() => setSettingsOpen(true)}
@@ -572,6 +679,8 @@ export function CommandCenter() {
         </div>
       </header>
 
+      <HostBridgeBanner onToast={flash} />
+
       <div className="relative z-10 flex shrink-0 items-center gap-1 overflow-x-auto border-b border-border bg-elevated/50 px-2 py-1">
         <span className="label-caps mr-1 shrink-0">Features</span>
         {FEATURE_LAUNCHERS.map(({ id, label, icon: Icon }) => (
@@ -579,8 +688,27 @@ export function CommandCenter() {
             key={id}
             type="button"
             onClick={() => {
-              if (mode !== "fleet" && id !== "matrix" && id !== "recipes" && id !== "mcp")
+              if (
+                mode !== "fleet" &&
+                id !== "matrix" &&
+                id !== "recipes" &&
+                id !== "mcp" &&
+                id !== "mission" &&
+                id !== "timeline"
+              )
                 loadDemo();
+              if (id === "handoff") {
+                requestGate("handoff", () => setFeature("handoff"));
+                return;
+              }
+              if (id === "broadcast") {
+                requestGate("broadcast", () => setFeature("broadcast"));
+                return;
+              }
+              if (id === "runbook") {
+                requestGate("runbook", () => setFeature("runbook"));
+                return;
+              }
               setFeature(id);
             }}
             className={`inline-flex shrink-0 items-center gap-1 rounded-sm border px-2 py-1 font-mono text-[10px] ${
@@ -646,6 +774,11 @@ export function CommandCenter() {
       )}
 
       <div className="relative z-10 flex min-h-0 flex-1">
+        {tab === "admin" && persona === "admin" && (
+          <div className="min-h-0 flex-1 overflow-hidden">
+            <AdminConsole onToast={flash} />
+          </div>
+        )}
         {tab === "command" && (
           <CommandView
             mode={mode}
@@ -824,6 +957,73 @@ export function CommandCenter() {
       {feature === "matrix" && <CapabilityMatrix onClose={() => setFeature(null)} />}
       {feature === "mcp" && (
         <McpControlCenter onClose={() => setFeature(null)} onToast={flash} />
+      )}
+      {feature === "diff" && (
+        <DiffPrPane panes={allPanes} onClose={() => setFeature(null)} onToast={flash} />
+      )}
+      {feature === "runbook" && (
+        <RunbookRunner
+          entitlements={entitlements}
+          onClose={() => setFeature(null)}
+          onToast={flash}
+          onGate={requestGate}
+        />
+      )}
+      {feature === "heat" && (
+        <ConflictHeatMap
+          panes={allPanes}
+          onClose={() => setFeature(null)}
+          onJump={jumpToPane}
+        />
+      )}
+      {feature === "timeline" && <SessionTimeline onClose={() => setFeature(null)} />}
+      {feature === "orgmcp" && (
+        <OrgMcpPolicy
+          entitlements={entitlements}
+          onClose={() => setFeature(null)}
+          onToast={flash}
+          onGate={requestGate}
+        />
+      )}
+      {feature === "team_inbox" && (
+        <SharedTeamInbox
+          panes={allPanes}
+          workspaces={workspaces}
+          entitlements={entitlements}
+          onJump={jumpToPane}
+          onClose={() => setFeature(null)}
+          onToast={flash}
+          onGate={requestGate}
+        />
+      )}
+      {feature === "mission" && (
+        <WelcomeMission
+          panes={allPanes}
+          mode={mode}
+          entitlements={entitlements}
+          onEntitlements={(e) => {
+            setEntitlements(e);
+            saveEntitlements(e);
+          }}
+          onLoadDemo={() => loadDemo()}
+          onOpenFeature={(id) => setFeature(id as FeatureId)}
+          onClose={() => setFeature(null)}
+          onToast={flash}
+        />
+      )}
+
+      {softGate && (
+        <SoftGateModal
+          feature={softGate.feature}
+          entitlements={entitlements}
+          onEntitlements={(e) => {
+            setEntitlements(e);
+            saveEntitlements(e);
+          }}
+          onClose={() => setSoftGate(null)}
+          onToast={flash}
+          onProceed={softGate.proceed}
+        />
       )}
 
       {mcpInspectId &&

@@ -26,16 +26,22 @@ Billing/API stays separate: [`jtmilan/ade-api`](https://github.com/jtmilan/ade-a
 
 ---
 
-## Features (UI + planned host)
+## Features (UI + host path)
 
 - **Command Center** — workspace tree, multi-pane fleet, drag-and-drop  
 - **Sub-linear layout** — pin, focus grid, stack, resize, auto-arrange  
-- **Safety** — worktree destroy confirmation on pane close  
-- **Wizard** — recipe-first setup + MCP spawn preview  
-- **MCP Control Center** — single config for all harnesses  
-- **Operator suite** — inbox, ownership, telemetry, broadcast, merge gate, handoff, layouts, matrix  
+- **Safety** — worktree destroy confirmation + path-scoped destroy  
+- **Agent bridge** — Tauri spawn/PTY stubs; honest web mock host banner  
+- **Status bus** — provenance-aware events (hooks / state_blind / mock)  
+- **Soft-gates** — credits vs upgrade; local worktrees never bricked  
+- **Wizard + Mission** — recipe-first setup + welcome activation  
+- **MCP Control Center** — single config; Org MCP policy (Team)  
+- **Operator suite** — inbox, heat map, timeline, runbook, Diff/PR, merge, handoff  
+- **Personas** — Operator / Admin / Viewer same shell  
 - **Themes** — dark / light / system  
-- **Settings** — Appearance, Billing/Usage mocks, architecture docs  
+- **Settings** — Appearance, Billing/Usage, architecture docs  
+
+→ Build path details: **[docs/BUILD-PATH.md](docs/BUILD-PATH.md)**
 
 ---
 
