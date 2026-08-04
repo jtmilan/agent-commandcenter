@@ -15,9 +15,10 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "format": "prettier --write .",
+    "preflight": "node scripts/preflight.mjs",
     "tauri": "tauri",
-    "tauri:dev": "tauri dev",
-    "tauri:build": "tauri build"
+    "tauri:dev": "node scripts/preflight.mjs && tauri dev",
+    "tauri:build": "node scripts/preflight.mjs && tauri build"
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.5.3",
@@ -73,6 +74,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.20.0",
+    "@tauri-apps/cli": "^2.5.0",
     "@types/node": "^22.16.5",
     "@types/pg": "^8.11.10",
     "@types/react": "^19.1.0",
@@ -91,6 +93,9 @@
     "typescript": "^5.7.0",
     "typescript-eslint": "^8.56.1",
     "vite": "^8.1.0"
+  },
+  "optionalDependencies": {
+    "@tauri-apps/api": "^2.5.0"
   },
   "description": "Agent Command Center (ADE) \u2014 Tauri native multi-harness operator (macOS first; UI via Vite)"
 }

@@ -1,21 +1,26 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "Agent Command Center",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "identifier": "com.jtmilan.agent-commandcenter",
   "build": {
     "beforeDevCommand": "npm run dev",
     "devUrl": "http://localhost:8080",
-    "beforeBuildCommand": "npm run build",
-    "frontendDist": "dist"
+    "beforeBuildCommand": "node scripts/build-desktop-dist.mjs",
+    "frontendDist": "../dist-desktop"
   },
   "app": {
+    "withGlobalTauri": true,
     "windows": [
       {
+        "label": "main",
         "title": "Agent Command Center",
         "width": 1280,
         "height": 800,
-        "resizable": true
+        "minWidth": 900,
+        "minHeight": 600,
+        "resizable": true,
+        "fullscreen": false
       }
     ],
     "security": {
@@ -25,6 +30,16 @@
   "bundle": {
     "active": true,
     "targets": "all",
-    "icon": []
-  }
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/henry.w@example.net",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "category": "DeveloperTool",
+    "shortDescription": "Multi-harness agent operator (ADE)",
+    "longDescription": "Agent Command Center — local-first multi-agent harness operator for Claude, Cursor, Codex, and more."
+  },
+  "plugins": {}
 }

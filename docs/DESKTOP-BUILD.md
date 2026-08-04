@@ -99,20 +99,19 @@ Scripts (already in `package.json`):
 | Path | Role |
 |------|------|
 | `src-tauri/src/lib.rs` | `spawn_agent`, `kill_agent`, `worktree_create`, `worktree_destroy` |
-| `src-tauri/tauri.conf.json` | Window + dev URL `http://localhost:8080` |
+| `src-tauri/tauri.conf.json` | Window + dev URL `http://localhost:8080` · `withGlobalTauri` |
+| `src-tauri/icons/` | App icons (required for build) |
 | `src-tauri/capabilities/default.json` | Deny-by-default core permissions |
 | `src-tauri/Cargo.toml` | Tauri 2 crate |
+| `scripts/preflight.mjs` | Wrong-repo / missing Rust guard |
+| `scripts/build-desktop-dist.mjs` | Static shell for `tauri:build` |
 
 Commands match JS [`src/lib/agent-bridge.ts`](../src/lib/agent-bridge.ts).
 
-If the first build fails on **missing icons**, generate them:
-
 ```bash
-# Place any 1024x1024 png then:
-npx tauri icon path/to/app-icon.png
+npm run preflight   # must pass before tauri:dev
+npm run tauri:dev
 ```
-
-Or add minimal icons under `src-tauri/icons/` per Tauri docs.
 
 ---
 

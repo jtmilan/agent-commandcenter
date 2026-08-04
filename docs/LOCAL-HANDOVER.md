@@ -120,30 +120,30 @@ curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 source "$HOME/.cargo/env"
 
 cd agent-commandcenter   # ← NOT ade-api
-pwd                      # …/agent-commandcenter
+git pull origin main
+
+pwd
 cat package.json | head -5   # "name": "agent-commandcenter"
 
-npm install
-npm install -D @tauri-apps/cli@2 @tauri-apps/api@2
+npm install                  # includes @tauri-apps/cli when on latest main
+cp -n .env.example .env      # soft-gates → local ade-api
 
-# Confirm scripts exist
-npm run   # should list tauri:dev and tauri:build
+# Optional: only if CLI not pulled via package.json
+# npm install -D @tauri-apps/cli@2 @tauri-apps/api@2
 
-# Ensure Claude CLI is on PATH if you want real spawn:
-which claude
+npm run preflight            # fails fast if wrong repo / no Rust
+which claude                 # optional real spawn
 
 npm run tauri:dev
-# native window; IPC → src-tauri spawn_agent / worktree_*
+# → native window + Vite on :8080; host banner should say desktop when IPC live
 ```
 
 Release package (macOS):
 
 ```bash
 npm run tauri:build
-# → target/release/bundle/… .app / dmg
+# builds dist-desktop shell then packages .app / dmg
 ```
-
-**Note:** `src-tauri/` is already in the repo (stubs: process spawn + `git worktree`). First `tauri:dev` may need icons / full Tauri init polish on your machine — if `tauri.conf.json` complains about icons, add placeholder icons under `src-tauri/icons` or run `npx tauri icon <png>`.
 
 ---
 

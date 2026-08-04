@@ -1,6 +1,7 @@
 node_modules/
 .tanstack/
 dist/
+dist-desktop/
 .output/
 .vercel/
 .nitro/
@@ -15,3 +16,4 @@ screenshots/*.png
 !screenshots/.gitkeep
 .prettierrc
 .node_modules.lock
+src-tauri/target/
