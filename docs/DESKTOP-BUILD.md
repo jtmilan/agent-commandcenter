@@ -4,7 +4,9 @@
 **Primary platform:** **macOS**. Windows and Linux use the same UI + Tauri project with OS-specific prerequisites.
 
 > **This is not a web app for running harnesses.**  
-> Cloning and opening `localhost` only previews the React UI. Terminal agents, worktrees, and local MCP require the **native Tauri host**.
+> Cloning and opening the Vite URL only previews the React UI. Terminal agents, worktrees, and local MCP require the **native Tauri host**.
+
+**End-to-end local rebuild + manual test:** **[LOCAL-HANDOVER.md](./LOCAL-HANDOVER.md)**
 
 ---
 
@@ -17,20 +19,20 @@
 └──────────────────┬───────────────────┘
                    │ IPC (invoke / events)
 ┌──────────────────▼───────────────────┐
-│  Tauri / Rust (src-tauri)            │  spawn, PTY, FS, git, MCP
+│  Tauri / Rust (src-tauri)            │  spawn, FS, git worktree
 │  macOS .app  ·  Win .exe  ·  Linux   │
 └──────────────────┬───────────────────┘
                    │ HTTPS
 ┌──────────────────▼───────────────────┐
-│  ade-api (separate repo)             │  billing only
+│  ade-api (separate repo)             │  billing / entitlements
 └──────────────────────────────────────┘
 ```
 
 | Command | What you get |
 |---------|----------------|
 | `npm run dev` | Vite UI preview — **mock** agents, no real PTY |
-| `npm run tauri dev` | **Native window** — path for real harness integration |
-| `npm run tauri build` | Installable **macOS app** (and other OS targets) |
+| `npm run tauri:dev` | **Native window** — process spawn + git worktree |
+| `npm run tauri:build` | Installable **macOS app** (and other OS targets) |
 
 ---
 
@@ -39,28 +41,30 @@
 ```bash
 git clone https://github.com/jtmilan/agent-commandcenter.git
 cd agent-commandcenter
+git pull origin main
+```
+
+Optional companion:
+
+```bash
+git clone https://github.com/jtmilan/ade-api.git
 ```
 
 ---
 
 ## 2. macOS prerequisites
 
-Install once on the machine that will build the app:
-
 ```bash
-# Xcode CLT (if missing)
-xcode-select --install
-
-# Rust
+xcode-select --install   # if missing
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 source "$HOME/.cargo/env"
 rustc --version
-
-# Node 20+
-node --version   # should be >= 20
+node --version           # >= 20
 ```
 
-Optional: read [Tauri 2 prerequisites — macOS](https://v2.tauri.app/start/prerequisites/).
+Optional: [Tauri 2 prerequisites — macOS](https://v2.tauri.app/start/prerequisites/).
+
+For **real** Claude spawn under Tauri, also install the Claude Code CLI and ensure `claude` is on `PATH`.
 
 ---
 
@@ -71,13 +75,14 @@ npm install
 npm install -D @tauri-apps/cli@2 @tauri-apps/api@2
 ```
 
-Add scripts to `package.json` if not already present:
+Scripts (already in `package.json`):
 
 ```json
 {
   "scripts": {
     "dev": "vite dev --host 0.0.0.0 --port 8080",
-    "build": "vite build",
+    "build": "vite build && npm run db:migrate",
+    "typecheck": "tsc --noEmit",
     "tauri": "tauri",
     "tauri:dev": "tauri dev",
     "tauri:build": "tauri build"
@@ -89,115 +94,91 @@ Add scripts to `package.json` if not already present:
 
 ## 4. Tauri project (`src-tauri`)
 
-If `src-tauri/` is **not** in the repo yet (UI-first phase):
+**Already present** in the repo:
+
+| Path | Role |
+|------|------|
+| `src-tauri/src/lib.rs` | `spawn_agent`, `kill_agent`, `worktree_create`, `worktree_destroy` |
+| `src-tauri/tauri.conf.json` | Window + dev URL `http://localhost:8080` |
+| `src-tauri/capabilities/default.json` | Deny-by-default core permissions |
+| `src-tauri/Cargo.toml` | Tauri 2 crate |
+
+Commands match JS [`src/lib/agent-bridge.ts`](../src/lib/agent-bridge.ts).
+
+If the first build fails on **missing icons**, generate them:
 
 ```bash
-npx tauri init
+# Place any 1024x1024 png then:
+npx tauri icon path/to/app-icon.png
 ```
 
-Recommended answers:
-
-- App name: **Agent Command Center**  
-- Window title: **Agent Command Center**  
-- Dev URL: `http://localhost:8080` (match Vite)  
-- Frontend dist: path produced by `vite build` (often `dist` / `.output/public` — align with this repo’s Vite config)
-
-Then implement plugins as documented in [ASYNC-CAPABILITIES.md](./ASYNC-CAPABILITIES.md):
-
-- `agent-bridge` — spawn / attach  
-- `worktree` — create / destroy (with confirm)  
-- `mcp-inject`  
-- `entitlements` — cache signed blob from ade-api  
-- `billing` — open Checkout URL in system browser only  
-
-**Capability rule:** deny-by-default; never put Stripe secrets in the app.
+Or add minimal icons under `src-tauri/icons/` per Tauri docs.
 
 ---
 
-## 5. Run native (macOS)
+## 5. Environment (soft-gates)
+
+Create `.env` (Vite) if desired:
 
 ```bash
-# Terminal A not required if tauri starts Vite for you;
-# with this repo you may run UI and host:
-
-npm run dev          # if tauri.json points at external dev server
-npm run tauri dev    # or: npx tauri dev
+VITE_ADE_API_URL=http://127.0.0.1:8787
+VITE_ENTITLEMENTS_VERIFY_SECRET=dev-only-change-me
 ```
 
-You should see a **native macOS window**, not only a browser tab.
+Must match ade-api `ENTITLEMENTS_SIGNING_SECRET` in dev.
 
 ---
 
-## 6. Build installable macOS app
+## 6. Run
 
 ```bash
-npm run build
-npx tauri build
+# Terminal A — API (optional but recommended)
+cd ../ade-api
+ALLOW_DEV_AUTH=1 ENTITLEMENTS_SIGNING_SECRET=dev-only-change-me npm run dev
+
+# Terminal B — UI only
+cd agent-commandcenter
+npm run dev
+
+# OR native host
+npm run tauri:dev
 ```
 
-Artifacts (typical):
-
-```text
-src-tauri/target/release/bundle/macos/Agent Command Center.app
-src-tauri/target/release/bundle/dmg/*.dmg
-```
-
-Distribute the **`.app` / `.dmg`** to operators. Do **not** tell them “open the website to run harnesses.”
-
-### Code signing / notarization (release)
-
-For outside-your-machine distribution on macOS, configure Apple Developer signing and notarization per [Tauri macOS distribution](https://v2.tauri.app/distribute/macos-application-bundle/). Required for smooth Gatekeeper installs.
-
----
-
-## 7. Windows & Linux (same repo, later)
-
-Same codebase; different host toolchain:
-
-| OS | Notes |
-|----|--------|
-| Windows | MSVC Build Tools, WebView2 |
-| Linux | `webkit2gtk`, `libssl`, etc. (see Tauri docs) |
+Release:
 
 ```bash
-npx tauri build   # on that OS CI runner or machine
+npm run tauri:build
 ```
 
 ---
 
-## 8. Pair with ade-api (billing only)
+## 7. Verify host path
 
-```bash
-git clone https://github.com/jtmilan/ade-api.git
-cd ade-api && cp .env.example .env && npm i && npm run dev
-# http://127.0.0.1:8787
-```
+1. Load demo fleet  
+2. Timeline shows spawn job events  
+3. Close pane → destroy worktree confirm  
+4. Under Tauri: `spawn_agent` runs `claude` (if installed)  
+5. Under Tauri: destroy uses `git worktree remove`
 
-Desktop app calls entitlements/checkout over HTTPS. It does **not** host Stripe webhooks.
-
----
-
-## 9. What contributors should not do
-
-| Don’t | Do instead |
-|-------|------------|
-| Deploy Vite build to Vercel as the “ADE product” for agents | Ship Tauri `.app` |
-| Expect browser tabs to spawn Claude/Codex | Use Tauri `invoke` + PTY |
-| Put `STRIPE_SECRET_KEY` in the app | Use `ade-api` |
-| Document only `npm run dev` as setup | Lead with `tauri dev` / `tauri build` |
+See manual script in [LOCAL-HANDOVER.md](./LOCAL-HANDOVER.md) §5.
 
 ---
 
-## 10. Checklist after clone
+## 8. Troubleshooting
 
-- [ ] Rust + Xcode CLT installed (macOS)  
-- [ ] `npm install`  
-- [ ] Tauri CLI available  
-- [ ] `src-tauri` present or initialized  
-- [ ] `npx tauri dev` opens **native** window  
-- [ ] Understand UI preview ≠ harness runtime  
-- [ ] Read [PRD-HANDOVER.md](./PRD-HANDOVER.md) for product scope  
+| Symptom | Check |
+|---------|--------|
+| Blank UI | Console errors; `npm run typecheck` |
+| No entitlements | ade-api up? `VITE_ADE_API_URL`? |
+| Spawn error under Tauri | `which claude`; PATH for GUI apps |
+| Worktree destroy fail | Path not under registered root; git available |
+| Icon / bundle error | `npx tauri icon …` |
+| Port conflict | Vite expects **8080** (tauri.conf `devUrl`) |
 
 ---
 
-*Primary product: **Tauri native macOS app**. Web is UI tooling only.*
+## 9. Security notes
+
+- Capabilities: start deny-by-default; expand only with need  
+- Never embed `STRIPE_*` or webhook secrets in the app  
+- Path-scope all worktree destroy/create to known project roots  

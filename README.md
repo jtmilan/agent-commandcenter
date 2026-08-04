@@ -22,7 +22,8 @@ Ship and use the **macOS (or other desktop) app** built with Tauri.
 
 Billing/API stays separate: [`jtmilan/ade-api`](https://github.com/jtmilan/ade-api) (no Stripe secrets in the desktop binary).
 
-→ Full clone & build steps: **[docs/DESKTOP-BUILD.md](docs/DESKTOP-BUILD.md)**
+→ Full clone & build steps: **[docs/DESKTOP-BUILD.md](docs/DESKTOP-BUILD.md)**  
+→ **Local rebuild + manual test handover:** **[docs/LOCAL-HANDOVER.md](docs/LOCAL-HANDOVER.md)**
 
 ---
 
@@ -112,12 +113,16 @@ Use `npm run dev` to iterate on React UI. Use **`npm run tauri dev`** when you n
 
 | Document | Description |
 |----------|-------------|
-| **[docs/DESKTOP-BUILD.md](docs/DESKTOP-BUILD.md)** | **Clone, Tauri, macOS build (start here)** |
-| [docs/ADE-API.md](docs/ADE-API.md) | Companion backend repo |
-| [docs/GROWTH-ENGAGEMENT-API.md](docs/GROWTH-ENGAGEMENT-API.md) | Coupons, credits, marketing, engagement |
-| [docs/PRD-HANDOVER.md](docs/PRD-HANDOVER.md) | Product handover |
-| [docs/ASYNC-CAPABILITIES.md](docs/ASYNC-CAPABILITIES.md) | Capabilities + async host model |
-| [docs/HMAC-WEBHOOK-VERIFICATION.md](docs/HMAC-WEBHOOK-VERIFICATION.md) | Webhook HMAC (ade-api only) |
+| **[docs/LOCAL-HANDOVER.md](docs/LOCAL-HANDOVER.md)** | **★ Clone, rebuild, manual test (start here)** |
+| **[docs/DESKTOP-BUILD.md](docs/DESKTOP-BUILD.md)** | Tauri / macOS build detail |
+| [docs/PRD-HANDOVER.md](docs/PRD-HANDOVER.md) | Product requirements v2 |
+| [docs/BUILD-PATH-V2.md](docs/BUILD-PATH-V2.md) | Host path top 5 |
+| [docs/ENTITLEMENTS-PROTOCOL.md](docs/ENTITLEMENTS-PROTOCOL.md) | Signed entitlements |
+| [docs/ADE-API.md](docs/ADE-API.md) | Companion backend |
+| [docs/GROWTH-ENGAGEMENT-API.md](docs/GROWTH-ENGAGEMENT-API.md) | Coupons, credits, marketing |
+| [docs/ASYNC-CAPABILITIES.md](docs/ASYNC-CAPABILITIES.md) | Capabilities + async host |
+| [docs/HMAC-WEBHOOK-VERIFICATION.md](docs/HMAC-WEBHOOK-VERIFICATION.md) | Webhook HMAC |
+
 | [docs/RECOMMENDATIONS-CHECKLIST.md](docs/RECOMMENDATIONS-CHECKLIST.md) | Integration checklist |
 | [docs/ARCHITECTURE-ANALYSES.md](docs/ARCHITECTURE-ANALYSES.md) | Plugin / security analyses |
 

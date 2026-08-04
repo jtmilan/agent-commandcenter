@@ -4,14 +4,15 @@ Handover pack for **Agent Command Center** — a **Tauri native desktop** produc
 
 | Document | Description |
 |----------|-------------|
+| **[LOCAL-HANDOVER.md](./LOCAL-HANDOVER.md)** | **★ Start here — clone, rebuild, manual test script** |
+| **[DESKTOP-BUILD.md](./DESKTOP-BUILD.md)** | Tauri / macOS build detail |
+| **[PRD-HANDOVER.md](./PRD-HANDOVER.md)** | Product requirements v2 + status |
+| **[BUILD-PATH-V2.md](./BUILD-PATH-V2.md)** | Immediate top 5 (Claude, destroy, bus, API, soft-gates) |
 | **[BUILD-PATH.md](./BUILD-PATH.md)** | Build path v1 (bridge → team → mission) |
-| **[BUILD-PATH-V2.md](./BUILD-PATH-V2.md)** | **Immediate top 5 shipped** (Claude, destroy, bus, API, soft-gates) |
 | **[ENTITLEMENTS-PROTOCOL.md](./ENTITLEMENTS-PROTOCOL.md)** | Signed entitlements + soft-gate contract |
-| **[DESKTOP-BUILD.md](./DESKTOP-BUILD.md)** | Clone & build Tauri / macOS |
-| **[PERSONA-CONSOLE.md](./PERSONA-CONSOLE.md)** | Admin / operator / viewer personas |
-| **[WIRE-PERSONA.md](./WIRE-PERSONA.md)** | Persona wire notes |
-| [PRD-HANDOVER.md](./PRD-HANDOVER.md) | Product requirements & engineering handover |
-| [ADE-API.md](./ADE-API.md) | Separate backend [`jtmilan/ade-api`](https://github.com/jtmilan/ade-api) |
+| [PERSONA-CONSOLE.md](./PERSONA-CONSOLE.md) | Admin / operator / viewer personas |
+| [WIRE-PERSONA.md](./WIRE-PERSONA.md) | Persona wire notes |
+| [ADE-API.md](./ADE-API.md) | Companion backend [`jtmilan/ade-api`](https://github.com/jtmilan/ade-api) |
 | [GROWTH-ENGAGEMENT-API.md](./GROWTH-ENGAGEMENT-API.md) | Coupons, credits, campaigns, engagement |
 | [ASYNC-CAPABILITIES.md](./ASYNC-CAPABILITIES.md) | Tauri capability JSON/TOML + async layers |
 | [HMAC-WEBHOOK-VERIFICATION.md](./HMAC-WEBHOOK-VERIFICATION.md) | Stripe HMAC (ade-api only) |
@@ -22,10 +23,10 @@ Handover pack for **Agent Command Center** — a **Tauri native desktop** produc
 
 **Settings (⌘,)** → **Architecture** / **API & delivery** / **HMAC & async**  
 **Features strip** → Mission · Heat · Timeline · Diff/PR · Runbook · Team Q · Org MCP  
-**Persona** → Admin for coupons/users/credits
+**Persona** → Admin for coupons/users/credits  
 
-## Start here (new engineer)
+## Start here (new engineer / local rebuild)
 
-1. **[BUILD-PATH.md](./BUILD-PATH.md)** — what just shipped  
+1. **[LOCAL-HANDOVER.md](./LOCAL-HANDOVER.md)** — clone both repos, run API + UI, tick manual tests  
 2. **[DESKTOP-BUILD.md](./DESKTOP-BUILD.md)** — Tauri native, not web-only  
 3. Pair with ade-api for billing only  
