@@ -108,15 +108,26 @@ npm run dev
 
 ### B) Native Tauri (path for real Claude / git)
 
+> **Wrong directory = this error:**  
+> `npm error Missing script: "tauri:dev"` **and** `audited 4 packages`  
+> → You are inside **`ade-api`**, not **`agent-commandcenter`**.  
+> Tauri lives only in the UI repo. Check with: `cat package.json | grep name` → must say `"agent-commandcenter"`.
+
 ```bash
 # Prerequisites (once): Xcode CLT, Rust stable, Node 20+
 xcode-select --install   # if needed
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 source "$HOME/.cargo/env"
 
-cd agent-commandcenter
+cd agent-commandcenter   # ← NOT ade-api
+pwd                      # …/agent-commandcenter
+cat package.json | head -5   # "name": "agent-commandcenter"
+
 npm install
 npm install -D @tauri-apps/cli@2 @tauri-apps/api@2
+
+# Confirm scripts exist
+npm run   # should list tauri:dev and tauri:build
 
 # Ensure Claude CLI is on PATH if you want real spawn:
 which claude
