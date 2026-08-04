@@ -90,11 +90,23 @@ Legend: **P0** ship-blocker · **P1** paid launch · **P2** polish / scale
 
 ## Immediate next 5 engineering tasks
 
-1. Scaffold `ade-api` with Stripe test webhook (HMAC + idempotency table).  
-2. Define real Tauri capability JSON matching §C.  
-3. Implement soft-gates in React from entitlements mock → real API.  
-4. Wire `spawn_agent` async job + events for one harness (Claude).  
+1. ~~Scaffold `ade-api` with Stripe test webhook (HMAC + idempotency table).~~ → done (ade-api)  
+2. ~~Define real Tauri capability JSON matching §C.~~ → partial (`src-tauri/capabilities`)  
+3. ~~Implement soft-gates in React from entitlements mock → real API.~~ → **v2 done**  
+4. ~~Wire `spawn_agent` async job + events for one harness (Claude).~~ → **v2 done**  
 5. Export `@ade/core` (mergeGate, handoff, mcpConfig) for other harness UIs.  
+
+### v2 top 5 (shipped 2026-08)
+
+See [BUILD-PATH-V2.md](./BUILD-PATH-V2.md) + [ENTITLEMENTS-PROTOCOL.md](./ENTITLEMENTS-PROTOCOL.md).
+
+| # | Task | Done |
+|---|------|------|
+| 1 | Claude spawn + job_id events | [x] |
+| 2 | Worktree destroy on close dialog | [x] |
+| 3 | Status bus from host events | [x] |
+| 4 | ade-api checkout + HMAC + signed entitlements | [x] |
+| 5 | Soft-gates from signed blob | [x] |
 
 ---
 

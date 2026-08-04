@@ -25,6 +25,7 @@ import {
   loadEntitlements,
   saveEntitlements,
   spendHandoffCredit,
+  startCheckout,
   type LocalEntitlements,
   type SoftGateFeature,
 } from "../../lib/entitlementsClient";
@@ -33,7 +34,7 @@ import {
   destroyWorktree,
   hostBannerText,
   registerWorktreeRoot,
-  spawnAgent,
+  spawnClaude,
   type HostMode,
 } from "../../lib/agent-bridge";
 import {
@@ -108,24 +109,16 @@ export function HostBridgeBanner({
         className="ml-auto rounded border border-border px-2 py-0.5 text-accent hover:bg-accent-dim"
         onClick={async () => {
           registerWorktreeRoot("/Users/demo/projects");
-          const job = await spawnAgent({
+          const job = await spawnClaude({
             paneId: "demo-spawn",
-            harness: "claude-code",
-            cmd: "claude",
             cwd: "/Users/demo/projects/harness-ready",
             worktree: "/Users/demo/projects/harness-ready/.worktrees/demo",
             role: "builder",
           });
-          publishStatus({
-            kind: "spawn",
-            paneId: job.paneId,
-            message: `spawn ${job.status} (${job.host}) job=${job.jobId}`,
-            source: job.host === "tauri" ? "pty" : "mock",
-          });
           onToast(
             job.host === "web_mock"
-              ? "Mock spawn queued — desktop Tauri required for real PTY"
-              : `Spawned job ${job.jobId}`,
+              ? `Mock Claude spawn · job=${job.jobId}`
+              : `Claude PTY job ${job.jobId}`,
           );
           onSpawnDemo?.();
         }}
@@ -225,7 +218,16 @@ export function SoftGateModal({
           type="button"
           className="rounded-md border border-accent/40 bg-accent-dim px-3 py-2 font-mono text-[11px] text-accent"
           onClick={() => {
-            onToast(`Checkout → upgrade to ${gate.upgrade ?? "pro"} (ade-api)`);
+            void startCheckout((gate.upgrade as "pro" | "team") ?? "pro")
+              .then((r) => {
+                onToast(`Checkout ${r.mode}: open ${r.url}`);
+                if (typeof window !== "undefined" && r.url) {
+                  window.open(r.url, "_blank", "noopener,noreferrer");
+                }
+              })
+              .catch(() => {
+                onToast(`Checkout → upgrade to ${gate.upgrade ?? "pro"} (start ade-api)`);
+              });
             onClose();
           }}
         >

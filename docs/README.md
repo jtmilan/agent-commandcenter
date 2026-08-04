@@ -4,7 +4,9 @@ Handover pack for **Agent Command Center** — a **Tauri native desktop** produc
 
 | Document | Description |
 |----------|-------------|
-| **[BUILD-PATH.md](./BUILD-PATH.md)** | **Next features shipped (bridge → team → mission)** |
+| **[BUILD-PATH.md](./BUILD-PATH.md)** | Build path v1 (bridge → team → mission) |
+| **[BUILD-PATH-V2.md](./BUILD-PATH-V2.md)** | **Immediate top 5 shipped** (Claude, destroy, bus, API, soft-gates) |
+| **[ENTITLEMENTS-PROTOCOL.md](./ENTITLEMENTS-PROTOCOL.md)** | Signed entitlements + soft-gate contract |
 | **[DESKTOP-BUILD.md](./DESKTOP-BUILD.md)** | Clone & build Tauri / macOS |
 | **[PERSONA-CONSOLE.md](./PERSONA-CONSOLE.md)** | Admin / operator / viewer personas |
 | **[WIRE-PERSONA.md](./WIRE-PERSONA.md)** | Persona wire notes |

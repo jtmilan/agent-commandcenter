@@ -10,7 +10,8 @@ import {
   type SetStateAction,
 } from "react";
 import { GripVertical, LayoutGrid, Pin } from "lucide-react";
-import { ClosePaneDialog } from "./ClosePaneDialog";
+import { ClosePaneDialog, type CloseConfirmResult } from "./ClosePaneDialog";
+
 import { RolePill, StatusPill, TelemetryChip } from "./badges";
 import { layoutMathBlurb, packWorkspace } from "./layout";
 import { PaneMenu } from "./PaneMenu";
@@ -373,7 +374,7 @@ export function PaneGrid({
   onTogglePin: (id: string) => void;
   onEnsurePin: (id: string) => void;
   onMoveToWorkspace: (paneId: string, workspaceId: string) => void;
-  onClose: (id: string) => void;
+  onClose: (id: string) => void | Promise<CloseConfirmResult | void>;
   onToast: (msg: string) => void;
   onPromoteStack: (paneId: string) => void;
   onOpenMcp?: (paneId: string) => void;
@@ -468,16 +469,21 @@ export function PaneGrid({
       open={Boolean(pendingCloseId)}
       pane={pendingPane}
       onCancel={() => setPendingCloseId(null)}
-      onConfirm={(id) => {
+      onConfirm={async (id) => {
         const p = panes.find((x) => x.id === id);
+        const result = await onClose(id);
+        if (result && result.ok === false) {
+          return result;
+        }
         setPendingCloseId(null);
         setZoomedId(null);
-        onClose(id);
         onToast(
-          p
-            ? `Destroyed worktree ${p.worktree} · closed ${p.name}`
-            : "Worktree destroyed · pane closed",
+          result?.message ??
+            (p
+              ? `Destroyed worktree ${p.worktree} · closed ${p.name}`
+              : "Worktree destroyed · pane closed"),
         );
+        return result ?? { ok: true, message: "closed", destroyed: true };
       }}
     />
   );

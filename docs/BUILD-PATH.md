@@ -60,3 +60,9 @@ npm run tauri:dev   # after Rust + src-tauri fully init
 ```
 
 Implement real PTY in `spawn_agent` and `git worktree` in worktree_* commands.
+
+---
+
+## v2 immediate top 5 — **done**
+
+See **[BUILD-PATH-V2.md](./BUILD-PATH-V2.md)** for Claude spawn, close→destroy, host status bus, ade-api signed entitlements, and soft-gates.

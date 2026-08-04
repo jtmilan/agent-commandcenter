@@ -1,18 +1,47 @@
-import { AlertTriangle, FolderX, GitBranch, X } from "lucide-react";
+import { useState } from "react";
+import { AlertTriangle, FolderX, GitBranch, Loader2, X } from "lucide-react";
 import type { Pane } from "./types";
+
+export type CloseConfirmResult = {
+  ok: boolean;
+  message: string;
+  destroyed?: boolean;
+  error?: string;
+};
 
 type Props = {
   pane: Pane | null;
   open: boolean;
   onCancel: () => void;
-  onConfirm: (paneId: string) => void;
+  /** Kill agent + path-scoped worktree destroy. Return result for toast. */
+  onConfirm: (paneId: string) => void | Promise<CloseConfirmResult | void>;
 };
 
 export function ClosePaneDialog({ pane, open, onCancel, onConfirm }: Props) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
   if (!open || !pane) return null;
 
   const dirty = pane.gitClean === false;
   const worktree = pane.worktree;
+
+  const handleConfirm = async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      const result = await onConfirm(pane.id);
+      if (result && result.ok === false) {
+        setError(result.error ?? result.message ?? "Destroy failed");
+        setBusy(false);
+        return;
+      }
+      setBusy(false);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+      setBusy(false);
+    }
+  };
 
   return (
     <div
@@ -20,7 +49,7 @@ export function ClosePaneDialog({ pane, open, onCancel, onConfirm }: Props) {
       role="dialog"
       aria-modal="true"
       aria-labelledby="close-pane-title"
-      onClick={onCancel}
+      onClick={busy ? undefined : onCancel}
     >
       <div
         className="w-full max-w-md overflow-hidden rounded-lg border border-danger/40 bg-surface shadow-panel"
@@ -39,7 +68,8 @@ export function ClosePaneDialog({ pane, open, onCancel, onConfirm }: Props) {
           <button
             type="button"
             onClick={onCancel}
-            className="rounded p-1 text-subtle hover:text-fg"
+            disabled={busy}
+            className="rounded p-1 text-subtle hover:text-fg disabled:opacity-40"
             aria-label="Cancel"
           >
             <X className="size-4" />
@@ -51,7 +81,8 @@ export function ClosePaneDialog({ pane, open, onCancel, onConfirm }: Props) {
             Exiting this pane will{" "}
             <strong className="text-danger">destroy the worktree folder</strong> and can{" "}
             <strong className="text-fg">result in data loss</strong> for uncommitted or
-            un-pushed work.
+            un-pushed work. The host will kill the agent job first, then run path-scoped
+            worktree remove.
           </p>
 
           <div className="rounded-md border border-border bg-elevated px-3 py-2 font-mono text-[11px]">
@@ -88,23 +119,35 @@ export function ClosePaneDialog({ pane, open, onCancel, onConfirm }: Props) {
               you need them.
             </p>
           )}
+
+          {error && (
+            <p className="rounded-md border border-danger/40 bg-danger-dim/30 px-3 py-2 font-mono text-[11px] text-danger">
+              {error}
+            </p>
+          )}
         </div>
 
         <footer className="flex flex-col-reverse gap-2 border-t border-border bg-elevated/40 px-4 py-3 sm:flex-row sm:justify-end">
           <button
             type="button"
             onClick={onCancel}
-            className="rounded-md border border-border bg-surface px-3 py-2 text-sm text-fg hover:bg-panel"
+            disabled={busy}
+            className="rounded-md border border-border bg-surface px-3 py-2 text-sm text-fg hover:bg-panel disabled:opacity-40"
           >
             Keep pane open
           </button>
           <button
             type="button"
-            onClick={() => onConfirm(pane.id)}
-            className="inline-flex items-center justify-center gap-2 rounded-md border border-danger/50 bg-danger-dim px-3 py-2 text-sm font-semibold text-danger hover:bg-danger/20"
+            onClick={() => void handleConfirm()}
+            disabled={busy}
+            className="inline-flex items-center justify-center gap-2 rounded-md border border-danger/50 bg-danger-dim px-3 py-2 text-sm font-semibold text-danger hover:bg-danger/20 disabled:opacity-60"
           >
-            <FolderX className="size-3.5" />
-            Destroy worktree & close
+            {busy ? (
+              <Loader2 className="size-3.5 animate-spin" />
+            ) : (
+              <FolderX className="size-3.5" />
+            )}
+            {busy ? "Destroying…" : "Destroy worktree & close"}
           </button>
         </footer>
       </div>

@@ -55,7 +55,7 @@ import {
   type LocalEntitlements,
   type SoftGateFeature,
 } from "./NextPathPanels";
-import { canUse } from "../../lib/entitlementsClient";
+import { canUse, refreshEntitlementsFromApi, setBearer } from "../../lib/entitlementsClient";
 import {
   PERSONAS,
   getPersona,
@@ -69,12 +69,20 @@ import { McpControlCenter } from "./McpControlCenter";
 import { McpPaneInspector } from "./McpPaneInspector";
 import { applyMcpSnapshotToPane, loadMcpConfig, snapshotMcpForHarness } from "./mcpConfig";
 import { PaneGrid, arrangePanes } from "./PaneGrid";
+import type { CloseConfirmResult } from "./ClosePaneDialog";
 import { SettingsPanel } from "./SettingsPanel";
 import { ThemeDocsPanel } from "./ThemeDocs";
 import { ThemeToggle, useTheme } from "./ThemeToggle";
 import { WorkspaceWizard } from "./wizard";
 import { publishStatus } from "../../lib/statusBus";
-import { destroyWorktree, registerWorktreeRoot } from "../../lib/agent-bridge";
+import {
+  destroyWorktree,
+  killPaneAgent,
+  registerWorktreeRoot,
+  spawnAgent,
+  spawnClaude,
+  subscribeHostEvents,
+} from "../../lib/agent-bridge";
 import type { Pane, TabId, Workspace } from "./types";
 
 type ViewMode = "empty" | "fleet";
@@ -175,6 +183,64 @@ export function CommandCenter() {
     window.setTimeout(() => setToast(null), 2600);
   }, []);
 
+  // Host events → pane status chips (needs_input / tool_fail / exit / spawn)
+  useEffect(() => {
+    return subscribeHostEvents((ev) => {
+      if (!ev.paneId) return;
+      setPanes((prev) =>
+        prev.map((p) => {
+          if (p.id !== ev.paneId) return p;
+          if (ev.kind === "needs_input") {
+            return {
+              ...p,
+              status: "needs_input",
+              attention: ev.message,
+              telemetry: p.harness.includes("claude") ? "live" : p.telemetry,
+            };
+          }
+          if (ev.kind === "tool_fail") {
+            return {
+              ...p,
+              status: "error",
+              lastToolFailure: ev.message,
+            };
+          }
+          if (ev.kind === "spawn_running" || ev.kind === "spawn_starting") {
+            return {
+              ...p,
+              status: ev.kind === "spawn_running" ? "working" : "starting",
+              telemetry: p.harness.includes("claude") ? "live" : p.telemetry,
+            };
+          }
+          if (ev.kind === "spawn_error") {
+            return { ...p, status: "error", lastToolFailure: ev.message };
+          }
+          if (ev.kind === "exit") {
+            return { ...p, status: "idle" };
+          }
+          return p;
+        }),
+      );
+    });
+  }, []);
+
+  // Soft-gates: refresh signed entitlements from ade-api (demo fallback)
+  useEffect(() => {
+    setBearer(persona === "admin" ? "admin" : persona === "viewer" ? "viewer" : "operator");
+    void refreshEntitlementsFromApi().then((e) => {
+      setEntitlements(e);
+      saveEntitlements(e);
+    });
+    const onFocus = () => {
+      void refreshEntitlementsFromApi().then((e) => {
+        setEntitlements(e);
+        saveEntitlements(e);
+      });
+    };
+    window.addEventListener("focus", onFocus);
+    return () => window.removeEventListener("focus", onFocus);
+  }, [persona]);
+
   const requestGate = useCallback(
     (feature: SoftGateFeature, proceed: () => void) => {
       const gate = canUse(entitlements, feature);
@@ -259,7 +325,31 @@ export function CommandCenter() {
         message: "Demo fleet loaded",
         source: "mock",
       });
-      flash("Demo fleet loaded");
+      void (async () => {
+        for (const p of next) {
+          const root = WORKSPACES.find((w) => w.id === p.workspaceId)?.path ?? p.worktree;
+          registerWorktreeRoot(root);
+          if (p.harness.includes("claude") || p.harness === "claude-code") {
+            await spawnClaude({
+              paneId: p.id,
+              cwd: root,
+              worktree: p.worktree,
+              role: p.role,
+              workspaceId: p.workspaceId,
+            });
+          } else {
+            await spawnAgent({
+              paneId: p.id,
+              harness: p.harness,
+              cwd: root,
+              worktree: p.worktree,
+              role: p.role,
+              workspaceId: p.workspaceId,
+            });
+          }
+        }
+        flash("Demo fleet loaded · spawn jobs queued");
+      })();
     },
     [flash],
   );
@@ -298,33 +388,53 @@ export function CommandCenter() {
     flash(`Renamed → ${name}`);
   };
 
-  const closePane = (id: string) => {
+  const closePane = async (id: string): Promise<CloseConfirmResult> => {
     const pane = panes.find((p) => p.id === id);
-    const finish = async () => {
-      if (pane?.worktree) {
-        registerWorktreeRoot(workspaces.find((w) => w.id === pane.workspaceId)?.path ?? "");
-        const r = await destroyWorktree(pane.worktree);
-        publishStatus({
-          kind: "worktree",
-          paneId: id,
-          message: r.ok
-            ? `Destroyed worktree ${pane.worktree}`
-            : `Worktree destroy blocked: ${r.error}`,
-          source: r.host === "tauri" ? "git" : "mock",
-        });
-      }
-      setPanes((prev) => prev.filter((p) => p.id !== id));
-      setOrders((o) => {
-        const next: Record<string, string[]> = {};
-        for (const [ws, ids] of Object.entries(o)) next[ws] = ids.filter((x) => x !== id);
-        return next;
+    if (!pane) {
+      return { ok: false, message: "Pane not found", error: "not_found" };
+    }
+
+    await killPaneAgent(id);
+
+    if (pane.worktree) {
+      const root =
+        workspaces.find((w) => w.id === pane.workspaceId)?.path ??
+        pane.worktree.replace(/\/\.worktrees\/.*$/, "") ??
+        "";
+      if (root) registerWorktreeRoot(root);
+      registerWorktreeRoot(pane.worktree.replace(/\/\.worktrees\/.*$/, "") || root);
+      const r = await destroyWorktree(pane.worktree, { force: true, paneId: id });
+      publishStatus({
+        kind: "worktree",
+        paneId: id,
+        message: r.ok
+          ? `Destroyed worktree ${pane.worktree} (${r.host})`
+          : `Worktree destroy blocked: ${r.error}`,
+        source: r.host === "tauri" ? "git" : "mock",
       });
-      if (selected === id) {
-        setSelected(panesInWorkspace.find((p) => p.id !== id)?.id ?? null);
+      if (!r.ok) {
+        return {
+          ok: false,
+          message: r.error ?? "destroy failed",
+          error: r.error,
+          destroyed: false,
+        };
       }
-      flash(pane ? `Closed ${pane.name}` : "Closed");
-    };
-    void finish();
+    }
+
+    setPanes((prev) => prev.filter((p) => p.id !== id));
+    setOrders((o) => {
+      const next: Record<string, string[]> = {};
+      for (const [ws, ids] of Object.entries(o)) next[ws] = ids.filter((x) => x !== id);
+      return next;
+    });
+    if (selected === id) {
+      setSelected(panesInWorkspace.find((p) => p.id !== id)?.id ?? null);
+    }
+
+    const message = `Destroyed worktree ${pane.worktree} · closed ${pane.name}`;
+    flash(message);
+    return { ok: true, message, destroyed: true };
   };
 
   const replyToPane = (paneId: string, text: string) => {

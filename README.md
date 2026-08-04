@@ -31,9 +31,10 @@ Billing/API stays separate: [`jtmilan/ade-api`](https://github.com/jtmilan/ade-a
 - **Command Center** — workspace tree, multi-pane fleet, drag-and-drop  
 - **Sub-linear layout** — pin, focus grid, stack, resize, auto-arrange  
 - **Safety** — worktree destroy confirmation + path-scoped destroy  
-- **Agent bridge** — Tauri spawn/PTY stubs; honest web mock host banner  
-- **Status bus** — provenance-aware events (hooks / state_blind / mock)  
-- **Soft-gates** — credits vs upgrade; local worktrees never bricked  
+- **Agent bridge** — Claude-first spawn + job events; Tauri process host; mock PTY in UI preview  
+- **Close safety** — kill job → path-scoped worktree destroy (async confirm)  
+- **Status bus** — host needs_input / tool_fail / exit → panes + Timeline  
+- **Soft-gates** — signed entitlements from ade-api (HMAC); credit vs upgrade  
 - **Wizard + Mission** — recipe-first setup + welcome activation  
 - **MCP Control Center** — single config; Org MCP policy (Team)  
 - **Operator suite** — inbox, heat map, timeline, runbook, Diff/PR, merge, handoff  
